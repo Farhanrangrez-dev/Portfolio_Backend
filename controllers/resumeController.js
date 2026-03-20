@@ -3,9 +3,17 @@ const fs = require("fs");
 const path = require("path");
 
 // GET /api/resume
+// const getResume = async (req, res) => {
+//   try {
+//     const resume = await Resume.findOne({ user: req.user._id });
+//     res.json(resume);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// }; 
 const getResume = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ user: req.user._id });
+    const resume = await Resume.findOne();
     res.json(resume);
   } catch (error) {
     res.status(500).json({ message: error.message });

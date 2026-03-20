@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
-const fileUpload = require('express-fileupload');
 const connectDB = require("./config/db");
 
 // Connect to MongoDB
@@ -14,17 +13,6 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use(fileUpload({
-  useTempFiles: true,
-    tempFileDir: path.join(__dirname, 'temp'), // ✅ FIX
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  safeFileNames: true,
-  preserveExtension: 4,
-  abortOnLimit: true,
-  limitHandler: function (req, res, next) {
-    res.status(400).send('File size limit exceeded');
-  }
-}));
 
 // Middleware
 app.use(cors());
