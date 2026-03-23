@@ -37,8 +37,7 @@ if (req.file) {
   imageUrl = result.secure_url;
   fs.unlinkSync(req.file.path);
 }
-
-
+ 
     const newProject = new Project({
       title,
       description,
@@ -103,18 +102,48 @@ const getProjects = async (req, res) => {
 
 
 // PUT /api/projects/:id
+// const updateProject = async (req, res) => {
+//   try {
+//     const project = await Project.findOne({ _id: req.params.id, user: req.user._id });
+//     if (!project) return res.status(404).json({ message: "Project not found" });
+
+//     Object.assign(project, req.body);
+//     await project.save();
+//     res.json(project);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 const updateProject = async (req, res) => {
   try {
     const project = await Project.findOne({ _id: req.params.id, user: req.user._id });
     if (!project) return res.status(404).json({ message: "Project not found" });
 
+    // ✅ NEW: Image upload logic
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "projects",
+      });
+
+      project.image = result.secure_url;
+
+      fs.unlinkSync(req.file.path); // local file delete
+    }
+
+    // ✅ बाकी fields update
     Object.assign(project, req.body);
+
     await project.save();
+
     res.json(project);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+
 
 // DELETE /api/projects/:id
 const deleteProject = async (req, res) => {
