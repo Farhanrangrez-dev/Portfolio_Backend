@@ -28,7 +28,7 @@ const uploadResume = async (req, res) => {
     if (!file) return res.status(400).json({ message: "No file uploaded" }); // ✅ CHANGE
 
     // Delete old resume if exists
-    const oldResume = await Resume.findOne({ user: req.user._id });
+    const oldResume = await Resume.findOne();
     if (oldResume) {
       const oldPath = path.join(__dirname, "..", oldResume.filepath);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
@@ -44,7 +44,7 @@ const uploadResume = async (req, res) => {
     const resume = await Resume.create({
       filename: file.name, // ✅ CHANGE
       filepath: `/uploads/${fileName}`, // ✅ CHANGE
-      user: req.user._id,
+      user: null,
     });
 
     res.status(201).json(resume);
