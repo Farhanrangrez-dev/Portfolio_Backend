@@ -116,10 +116,25 @@ const getProjects = async (req, res) => {
 // };
 const updateProject = async (req, res) => {
   try {
-    const project = await Project.findOne({ _id: req.params.id, user: req.user._id });
-    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    // ✅ NEW: Image upload logic
+    const project = await Project.findOne({ 
+      _id: req.params.id, 
+      user: req.user._id 
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // ✅ technologies fix
+    if (req.body.technologies && typeof req.body.technologies === "string") {
+      req.body.technologies = JSON.parse(req.body.technologies);
+    }
+
+    // ✅ image upload
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: "projects",
@@ -127,7 +142,7 @@ const updateProject = async (req, res) => {
 
       project.image = result.secure_url;
 
-      fs.unlinkSync(req.file.path); // local file delete
+      fs.unlinkSync(req.file.path);
     }
 
     // ✅ बाकी fields update
@@ -138,6 +153,7 @@ const updateProject = async (req, res) => {
     res.json(project);
 
   } catch (error) {
+    console.log("ERROR:", error); // 👈 debug
     res.status(500).json({ message: error.message });
   }
 };
