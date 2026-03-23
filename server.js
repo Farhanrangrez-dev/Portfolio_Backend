@@ -21,12 +21,12 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 
-// const fileUpload = require('express-fileupload');
+const fileUpload = require('express-fileupload');
 
-// app.use(fileUpload({
-//   useTempFiles: true,
-//   tempFileDir: '/tmp/' // Railway ke liye MUST
-// }));
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/' // Railway ke liye MUST
+}));
 
 // Middleware
 app.use(cors());
