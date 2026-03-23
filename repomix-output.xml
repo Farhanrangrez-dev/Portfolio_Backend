@@ -1,0 +1,1220 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+config/cloudinary.js
+config/db.js
+controllers/authController.js
+controllers/experienceController.js
+controllers/heroSectionController.js
+controllers/messageController.js
+controllers/profileController.js
+controllers/projectController.js
+controllers/resumeController.js
+controllers/settingsController.js
+controllers/skillController.js
+middleware/auth.js
+middleware/upload.js
+models/Experience.js
+models/HeroSection.js
+models/Message.js
+models/Project.js
+models/Resume.js
+models/Settings.js
+models/Skill.js
+models/User.js
+package.json
+routes/authRoutes.js
+routes/experienceRoutes.js
+routes/heroSectionRoutes.js
+routes/messageRoutes.js
+routes/profileRoutes.js
+routes/projectRoutes.js
+routes/resumeRoutes.js
+routes/settingsRoutes.js
+routes/skillRoutes.js
+server.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="config/cloudinary.js">
+const cloudinary = require('cloudinary').v2;
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+cloudinary.config({
+  cloud_name: 'dkqcqrrbp',
+  api_key: '418838712271323',
+  api_secret: 'p12EKWICdyHWx8LcihuWYqIruWQ'
+});
+
+module.exports = cloudinary;
+</file>
+
+<file path="config/db.js">
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+</file>
+
+<file path="controllers/authController.js">
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
+};
+
+// POST /api/auth/signup
+const signup = async (req, res) => {
+  try {
+    const { fullName, email, password, phone, countryCode } = req.body;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(409).json({ message: "Account already exists with this email. Please sign in." });
+    }
+
+    const user = await User.create({ fullName, email, password, phone, countryCode });
+
+    res.status(201).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/login
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ message: "Invalid email or password" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { signup, login };
+</file>
+
+<file path="controllers/experienceController.js">
+const Experience = require("../models/Experience");
+
+// GET /api/experiences
+const getExperiences = async (req, res) => {
+  try {
+    const experiences = await Experience.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.json(experiences);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/experiences
+const createExperience = async (req, res) => {
+  try {
+    const experience = await Experience.create({ ...req.body, user: req.user._id });
+    res.status(201).json(experience);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/experiences/:id
+const updateExperience = async (req, res) => {
+  try {
+    const experience = await Experience.findOne({ _id: req.params.id, user: req.user._id });
+    if (!experience) return res.status(404).json({ message: "Experience not found" });
+
+    Object.assign(experience, req.body);
+    await experience.save();
+    res.json(experience);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/experiences/:id
+const deleteExperience = async (req, res) => {
+  try {
+    const experience = await Experience.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!experience) return res.status(404).json({ message: "Experience not found" });
+    res.json({ message: "Experience deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getExperiences, createExperience, updateExperience, deleteExperience };
+</file>
+
+<file path="controllers/heroSectionController.js">
+const HeroSection = require("../models/HeroSection");
+
+// GET /api/hero-section
+const getHeroSection = async (req, res) => {
+  try {
+    let hero = await HeroSection.findOne({ user: req.user._id });
+    if (!hero) {
+      hero = await HeroSection.create({
+        name: "Your Name",
+        title: "Full Stack Developer",
+        user: req.user._id,
+      });
+    }
+    res.json(hero);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/hero-section
+const updateHeroSection = async (req, res) => {
+  try {
+    let hero = await HeroSection.findOne({ user: req.user._id });
+    if (!hero) {
+      hero = await HeroSection.create({ ...req.body, user: req.user._id });
+    } else {
+      Object.assign(hero, req.body);
+      await hero.save();
+    }
+    res.json(hero);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getHeroSection, updateHeroSection };
+</file>
+
+<file path="controllers/profileController.js">
+const User = require("../models/User");
+
+// GET /api/profile
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/profile
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { fullName, email, phone, countryCode } = req.body;
+    if (fullName) user.fullName = fullName;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (countryCode) user.countryCode = countryCode;
+
+    if (req.file) {
+      user.profilePicture = `/uploads/${req.file.filename}`;
+    }
+
+    await user.save();
+    res.json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      countryCode: user.countryCode,
+      profilePicture: user.profilePicture,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getProfile, updateProfile };
+</file>
+
+<file path="controllers/projectController.js">
+const Project = require("../models/Project");
+const cloudinary = require('../config/cloudinary');
+const asyncHandler = require("express-async-handler");
+
+cloudinary.config({
+  cloud_name: 'dkqcqrrbp',
+  api_key: '418838712271323',
+  api_secret: 'p12EKWICdyHWx8LcihuWYqIruWQ'
+});
+
+const createProject = asyncHandler(async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      category,
+      startDate,
+      endDate,
+      liveUrl,
+      githubUrl,
+    } = req.body;
+
+    // ✅ FIX HERE
+    let technologies = [];
+    if (req.body.technologies) {
+      technologies = JSON.parse(req.body.technologies);
+    }
+
+    let imageUrl = "";
+
+    if (req.files && req.files.image) {
+      const file = req.files.image;
+
+      const result = await cloudinary.uploader.upload(file.tempFilePath, {
+        folder: "projects",
+      });
+
+      imageUrl = result.secure_url;
+    }
+
+    const newProject = new Project({
+      title,
+      description,
+      category,
+      startDate,
+      endDate,
+      technologies, // ✅ parsed array
+      liveUrl,
+      githubUrl,
+      image: imageUrl,
+      user: req.user._id,
+    });
+
+    const saved = await newProject.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Project created",
+      data: saved,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+// POST /api/projects
+// const createProject = async (req, res) => {
+//   try {
+//     const project = await Project.create({ ...req.body, user: req.user._id });
+//     res.status(201).json(project);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+
+
+
+// GET /api/projects
+// const getProjects = async (req, res) => {
+//   try {
+//     const projects = await Project.find({ user: req.user._id }).sort({ createdAt: -1 });
+//     res.json(projects);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+const getProjects = async (req, res) => {
+  try {
+    const projects = await Project.find().sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// PUT /api/projects/:id
+const updateProject = async (req, res) => {
+  try {
+    const project = await Project.findOne({ _id: req.params.id, user: req.user._id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    Object.assign(project, req.body);
+    await project.save();
+    res.json(project);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/projects/:id
+const deleteProject = async (req, res) => {
+  try {
+    const project = await Project.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    res.json({ message: "Project deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Unique Categories API
+const getCategories = async (req, res) => {
+  try {
+
+    const categories = await Project.distinct("category")
+
+    res.json(categories)
+
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+
+// GET SINGLE PROJECT /api/projects/:id
+const getSingleProject = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id)
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" })
+    }
+
+    res.json(project)
+
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+ module.exports = { getProjects, createProject, updateProject, deleteProject,getCategories,getSingleProject };
+</file>
+
+<file path="controllers/settingsController.js">
+const Settings = require("../models/Settings");
+const User = require("../models/User");
+
+// GET /api/settings
+const getSettings = async (req, res) => {
+  try {
+    let settings = await Settings.findOne({ user: req.user._id });
+    if (!settings) {
+      settings = await Settings.create({ user: req.user._id });
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/settings
+const updateSettings = async (req, res) => {
+  try {
+    let settings = await Settings.findOne({ user: req.user._id });
+    if (!settings) {
+      settings = await Settings.create({ ...req.body, user: req.user._id });
+    } else {
+      Object.assign(settings, req.body);
+      await settings.save();
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/settings/password
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!(await user.matchPassword(currentPassword))) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getSettings, updateSettings, changePassword };
+</file>
+
+<file path="controllers/skillController.js">
+const Skill = require("../models/Skill");
+
+// GET /api/skills
+// const getSkills = async (req, res) => {
+//   try {
+//     const skills = await Skill.find({ user: req.user._id }).sort({ category: 1 });
+//     res.json(skills);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+const getSkills = async (req, res) => {
+  try {
+    const skills = await Skill.find().sort({ category: 1 });
+    res.json(skills);
+  } catch (error) {
+    res.status(500).json({ message: error.message }); 
+  }
+};
+
+// POST /api/skills
+const createSkill = async (req, res) => {
+  try {
+    const skill = await Skill.create({ ...req.body, user: req.user._id });
+    res.status(201).json(skill);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/skills/:id
+const updateSkill = async (req, res) => {
+  try {
+    const skill = await Skill.findOne({ _id: req.params.id, user: req.user._id });
+    if (!skill) return res.status(404).json({ message: "Skill not found" });
+
+    Object.assign(skill, req.body);
+    await skill.save();
+    res.json(skill);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/skills/:id
+const deleteSkill = async (req, res) => {
+  try {
+    const skill = await Skill.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!skill) return res.status(404).json({ message: "Skill not found" });
+    res.json({ message: "Skill deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getSkills, createSkill, updateSkill, deleteSkill };
+</file>
+
+<file path="middleware/auth.js">
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+const protect = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select("-password");
+      next();
+    } catch (error) {
+      res.status(401).json({ message: "Not authorized, token failed" });
+    }
+  }
+
+  if (!token) {
+    res.status(401).json({ message: "Not authorized, no token" });
+  }
+};
+
+module.exports = { protect };
+</file>
+
+<file path="middleware/upload.js">
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename(req, file, cb) {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+  const extname = allowedTypes.test(
+    path.extname(file.originalname).toLowerCase()
+  );
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (extname && mimetype) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only images and PDFs are allowed"));
+  }
+};
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+
+module.exports = upload;
+</file>
+
+<file path="models/Experience.js">
+const mongoose = require("mongoose");
+
+const experienceSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    company: { type: String, required: true },
+    dateRange: { type: String, required: true },
+    description: { type: String },
+    type: {
+      type: String,
+      enum: ["work", "education"],
+      required: true,
+    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Experience", experienceSchema);
+</file>
+
+<file path="models/HeroSection.js">
+const mongoose = require("mongoose");
+
+const serviceSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  icon: { type: String },
+  description: { type: String },
+  bgColor: { type: String, default: "#facc15" },
+});
+
+const heroSectionSchema = new mongoose.Schema(
+  {
+    greeting: { type: String, default: "Hello, I'm" },
+    name: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    bgColor: { type: String, default: "#000000" },
+    textColor: { type: String, default: "#ffffff" },
+    services: [serviceSchema],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("HeroSection", heroSectionSchema);
+</file>
+
+<file path="models/Project.js">
+const mongoose = require("mongoose");
+
+const projectSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    image: { type: String },
+    category: {
+      type: String,
+      required: true,
+    },
+    startDate: { type: Date },
+    endDate: { type: Date },
+  technologies: {
+  type: [String],
+  default: []
+},
+    liveUrl: { type: String },
+    githubUrl: { type: String },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Project", projectSchema);
+</file>
+
+<file path="models/Resume.js">
+const mongoose = require("mongoose");
+
+const resumeSchema = new mongoose.Schema(
+  {
+    filename: { type: String, required: true },
+    filepath: { type: String, required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Resume", resumeSchema);
+</file>
+
+<file path="models/Settings.js">
+const mongoose = require("mongoose");
+
+const settingsSchema = new mongoose.Schema(
+  {
+    phone: { type: String },
+    email: { type: String },
+    linkedin: { type: String },
+    github: { type: String },
+    twitter: { type: String },
+    instagram: { type: String },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Settings", settingsSchema);
+</file>
+
+<file path="models/Skill.js">
+const mongoose = require("mongoose");
+
+const skillSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    proficiency: { type: Number, min: 0, max: 100, required: true },
+    category: {
+      type: String,
+      // enum: ["Frontend", "Backend", "Database", "Design", "Tools", "Other"],
+      required: true,
+    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Skill", skillSchema);
+</file>
+
+<file path="models/User.js">
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+
+const userSchema = new mongoose.Schema(
+  {
+    fullName: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    phone: { type: String },
+    countryCode: { type: String, default: "+91" },
+    profilePicture: { type: String },
+  },
+  { timestamps: true }
+);
+
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model("User", userSchema);
+</file>
+
+<file path="routes/authRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { signup, login } = require("../controllers/authController");
+
+router.post("/signup", signup);
+router.post("/login", login);
+
+module.exports = router;
+</file>
+
+<file path="routes/experienceRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getExperiences, createExperience, updateExperience, deleteExperience } = require("../controllers/experienceController");
+
+router.route("/").get(protect, getExperiences).post(protect, createExperience);
+router.route("/:id").put(protect, updateExperience).delete(protect, deleteExperience);
+
+module.exports = router;
+</file>
+
+<file path="routes/heroSectionRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getHeroSection, updateHeroSection } = require("../controllers/heroSectionController");
+
+router.route("/").get(protect, getHeroSection).put(protect, updateHeroSection);
+
+module.exports = router;
+</file>
+
+<file path="routes/messageRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getMessages, createMessage, markAsRead, deleteMessage } = require("../controllers/messageController");
+
+router.route("/").get(protect, getMessages).post(createMessage);
+router.put("/:id/read", protect, markAsRead);
+router.delete("/:id", protect, deleteMessage);
+
+module.exports = router;
+</file>
+
+<file path="routes/profileRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const upload = require("../middleware/upload");
+const { getProfile, updateProfile } = require("../controllers/profileController");
+
+router.route("/").get(protect, getProfile).put(protect, upload.single("profilePicture"), updateProfile);
+
+module.exports = router;
+</file>
+
+<file path="routes/projectRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getProjects, createProject, updateProject, deleteProject, getCategories,getSingleProject } = require("../controllers/projectController");
+
+router.route("/").get(getProjects).post(protect, createProject);
+router.route("/:id").put(protect, updateProject).delete(protect, deleteProject);
+router.get("/categories", getCategories)
+router.get("/single/:id", getSingleProject)
+
+module.exports = router;
+</file>
+
+<file path="routes/settingsRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getSettings, updateSettings, changePassword } = require("../controllers/settingsController");
+
+router.route("/").get(protect, getSettings).put(protect, updateSettings);
+router.put("/password", protect, changePassword);
+
+module.exports = router;
+</file>
+
+<file path="routes/skillRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const { getSkills, createSkill, updateSkill, deleteSkill } = require("../controllers/skillController");
+
+router.route("/").get(getSkills).post(protect, createSkill);
+router.route("/:id").put(protect, updateSkill).delete(protect, deleteSkill);
+
+module.exports = router;
+</file>
+
+<file path="controllers/messageController.js">
+const Message = require("../models/Message");
+
+// GET /api/messages
+// const getMessages = async (req, res) => {
+//   try {
+//     const messages = await Message.find({ user: req.user._id }).sort({ createdAt: -1 });
+//     res.json(messages);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+const getMessages = async (req, res) => {
+  try {
+    const messages = await Message.find().sort({ createdAt: -1 });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/messages (public - from contact form)
+const createMessage = async (req, res) => {
+  try {
+    const message = await Message.create(req.body);
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/messages/:id/read
+const markAsRead = async (req, res) => {
+  try {
+    const message = await Message.findOne({ _id: req.params.id, user: req.user._id });
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    message.isRead = true;
+    await message.save();
+    res.json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/messages/:id
+// const deleteMessage = async (req, res) => {
+//   try {
+//     const message = await Message.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+//     if (!message) return res.status(404).json({ message: "Message not found" });
+//     res.json({ message: "Message deleted" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+const deleteMessage = async (req, res) => {
+  try {
+    const message = await Message.findByIdAndDelete(req.params.id); // ✅ FIX
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    res.json({ message: "Message deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+module.exports = { getMessages, createMessage, markAsRead, deleteMessage };
+</file>
+
+<file path="models/Message.js">
+// const mongoose = require("mongoose");
+
+// const messageSchema = new mongoose.Schema(
+//   {
+//     senderName: { type: String, required: true },
+//     senderEmail: { type: String, required: true },
+//     content: { type: String, required: true },
+//     isRead: { type: Boolean, default: false },
+//     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+//   },
+//   { timestamps: true }
+// );
+
+// module.exports = mongoose.model("Message", messageSchema);
+
+
+
+
+const mongoose = require("mongoose");
+
+const messageSchema = new mongoose.Schema(
+  {
+    senderName: { type: String, required: true },
+
+    senderEmail: { 
+      type: String, 
+      required: true,
+      match: [/^\S+@\S+\.\S+$/, "Please use a valid email address"]
+    },
+
+    subject: { type: String, required: true },
+
+    message: { 
+      type: String, 
+      required: true,
+      minlength: 5
+    }, 
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Message", messageSchema);
+</file>
+
+<file path=".gitignore">
+.env
+node_modules/
+uploads/
+temp/
+</file>
+
+<file path="package.json">
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-async-handler": "^1.2.0",
+    "express-fileupload": "^1.5.2",
+    "express-rate-limit": "^8.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.3.0",
+    "multer": "^2.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
+</file>
+
+<file path="routes/resumeRoutes.js">
+const express = require("express");
+const router = express.Router();
+const { protect } = require("../middleware/auth");
+const upload = require("../middleware/upload");
+const { getResume, uploadResume, deleteResume } = require("../controllers/resumeController");
+
+router.route("/").get(getResume).post(protect, upload.single("resume"), uploadResume).delete(protect, deleteResume);
+
+module.exports = router;
+</file>
+
+<file path="controllers/resumeController.js">
+const Resume = require("../models/Resume");
+const fs = require("fs");
+const path = require("path");
+
+// GET /api/resume
+// const getResume = async (req, res) => {
+//   try {
+//     const resume = await Resume.findOne({ user: req.user._id });
+//     res.json(resume);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// }; 
+const getResume = async (req, res) => {
+  try {
+    const resume = await Resume.findOne();
+    res.json(resume);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/resume
+const uploadResume = async (req, res) => {
+  try {
+    const file = req.files?.resume; // ✅ CHANGE
+
+    if (!file) return res.status(400).json({ message: "No file uploaded" }); // ✅ CHANGE
+
+    // Delete old resume if exists
+    const oldResume = await Resume.findOne();
+    if (oldResume) {
+      const oldPath = path.join(__dirname, "..", oldResume.filepath);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      await Resume.deleteOne({ _id: oldResume._id });
+    }
+
+    // ✅ ADD (file save)
+    const fileName = Date.now() + "_" + file.name;
+    const uploadPath = path.join(__dirname, "..", "uploads", fileName);
+
+    await file.mv(uploadPath);
+
+    const resume = await Resume.create({
+      filename: file.name, // ✅ CHANGE
+      filepath: `/uploads/${fileName}`, // ✅ CHANGE
+      user: null,
+    });
+
+    res.status(201).json(resume);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/resume
+const deleteResume = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ user: req.user._id });
+    if (!resume) return res.status(404).json({ message: "Resume not found" });
+
+    const filePath = path.join(__dirname, "..", resume.filepath);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    await Resume.deleteOne({ _id: resume._id });
+    res.json({ message: "Resume deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getResume, uploadResume, deleteResume };
+</file>
+
+<file path="server.js">
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+require("dotenv").config();
+const connectDB = require("./config/db");
+
+// Connect to MongoDB
+connectDB();
+
+const app = express();
+
+
+const fs = require("fs");
+
+const uploadDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+
+const fileUpload = require('express-fileupload');
+
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/' // Railway ke liye MUST
+}));
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'upload')));
+
+// ✅ Upload folder static
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/projects", require("./routes/projectRoutes"));
+app.use("/api/skills", require("./routes/skillRoutes"));
+app.use("/api/experiences", require("./routes/experienceRoutes"));
+app.use("/api/messages", require("./routes/messageRoutes"));
+app.use("/api/hero-section", require("./routes/heroSectionRoutes"));
+app.use("/api/settings", require("./routes/settingsRoutes"));
+app.use("/api/profile", require("./routes/profileRoutes"));
+app.use("/api/resume", require("./routes/resumeRoutes"));
+
+// Dashboard stats endpoint
+app.get("/api/dashboard/stats", require("./middleware/auth").protect, async (req, res) => {
+  try {
+    const Project = require("./models/Project");
+    const Skill = require("./models/Skill");
+    const Message = require("./models/Message");
+
+    const [projects, skills, messages] = await Promise.all([
+      Project.countDocuments({ user: req.user._id }),
+      Skill.countDocuments({ user: req.user._id }),
+      Message.countDocuments({ user: req.user._id, isRead: false }),
+    ]);
+
+    res.json({ projects, skills, unreadMessages: messages });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+</file>
+
+</files>
