@@ -1,6 +1,7 @@
 const Project = require("../models/Project");
 const cloudinary = require('../config/cloudinary');
 const asyncHandler = require("express-async-handler");
+const fs = require("fs"); 
 
 cloudinary.config({
   cloud_name: 'dkqcqrrbp',
@@ -28,15 +29,15 @@ const createProject = asyncHandler(async (req, res) => {
 
     let imageUrl = "";
 
-    if (req.files && req.files.image) {
-      const file = req.files.image;
+if (req.file) {
+  const result = await cloudinary.uploader.upload(req.file.path, {
+    folder: "projects",
+  });
 
-      const result = await cloudinary.uploader.upload(file.tempFilePath, {
-        folder: "projects",
-      });
+  imageUrl = result.secure_url;
+  fs.unlinkSync(req.file.path);
+}
 
-      imageUrl = result.secure_url;
-    }
 
     const newProject = new Project({
       title,
