@@ -23,7 +23,8 @@ const getResume = async (req, res) => {
 // POST /api/resume
 const uploadResume = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const file = req.files?.resume;
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
     // Delete old resume if exists
     const oldResume = await Resume.findOne({ user: req.user._id });
@@ -34,7 +35,7 @@ const uploadResume = async (req, res) => {
     }
 
     const resume = await Resume.create({
-      filename: req.file.originalname,
+      filename: file.name,
       filepath: `/uploads/${req.file.filename}`,
       user: req.user._id,
     });
