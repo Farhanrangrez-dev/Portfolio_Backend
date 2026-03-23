@@ -5,7 +5,9 @@ const upload = require("../middleware/upload");
 const { getProjects, createProject, updateProject, deleteProject, getCategories,getSingleProject } = require("../controllers/projectController");
 
 router.route("/").get(getProjects).post(protect, upload.single("image"), createProject);
-router.route("/projects/:id").put(upload.single("image"), updateProject).delete(protect, deleteProject);
+router.route("/:id")
+  .put(protect, upload.single("image"), updateProject)
+  .delete(protect, deleteProject);
 router.get("/categories", getCategories)
 router.get("/single/:id", getSingleProject)
 
